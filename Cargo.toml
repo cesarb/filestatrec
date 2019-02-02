@@ -1,0 +1,9 @@
+[package]
+name = "gitstatrec"
+version = "0.0.1"
+authors = ["Cesar Eduardo Barros <cesarb@cesarb.eti.br>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.32.0"
+nix = "0.13.0"
