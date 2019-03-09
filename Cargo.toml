@@ -1,6 +1,6 @@
 [package]
 name = "gitstatrec"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Cesar Eduardo Barros <cesarb@cesarb.eti.br>"]
 edition = "2018"
 

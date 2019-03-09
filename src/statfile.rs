@@ -15,9 +15,9 @@ pub type StatFileEntry<'a> = (Cow<'a, [u8]>, Cow<'a, [u8]>);
 
 pub const STATFILE: &str = ".filestat";
 
-pub fn read_stat_file(filename: &str) -> Result<Vec<u8>> {
+pub fn read_stat_file(filename: &str, create: bool) -> Result<Vec<u8>> {
     match read(filename) {
-        Err(ref err) if err.kind() == ErrorKind::NotFound => Ok(Vec::new()),
+        Err(ref err) if create && err.kind() == ErrorKind::NotFound => Ok(Vec::new()),
         result => result,
     }
 }
@@ -118,7 +118,7 @@ impl StatApply {
         let name = CString::new(name)?;
         let follow = follow && !self.is_link();
 
-        // TODO check for .. in name and/or and link target
+        // TODO check for .. in name and/or link target
 
         if let Some(mode) = self.mode {
             if follow {
@@ -183,7 +183,7 @@ fn unescape(name: &[u8]) -> Result<Cow<[u8]>> {
     Ok(if name.contains(&b'\\') {
         let mut buf = Vec::with_capacity(name.len());
 
-        let mut iter = name.into_iter();
+        let mut iter = name.iter();
         while let Some(&c) = iter.next() {
             buf.push(if c == b'\\' {
                 match iter.next() {

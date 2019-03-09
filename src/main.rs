@@ -34,6 +34,7 @@ fn main() -> Result<()> {
         )
         .subcommand(
             SubCommand::with_name("apply")
+                .arg(Arg::with_name("file").multiple(true).required(false))
                 .arg(
                     Arg::with_name("follow")
                         .long("follow")
@@ -58,7 +59,7 @@ fn add(arg_matches: &ArgMatches) -> Result<()> {
     let follow = !arg_matches.is_present("no-follow");
     let force = arg_matches.is_present("force");
 
-    let stat_file = read_stat_file(STATFILE)?;
+    let stat_file = read_stat_file(STATFILE, true)?;
     let mut stat_file = parse_stat_file(&stat_file)?;
 
     for name in arg_matches.values_of_os("file").unwrap() {
@@ -88,12 +89,29 @@ fn add(arg_matches: &ArgMatches) -> Result<()> {
 
 fn apply(arg_matches: &ArgMatches) -> Result<()> {
     let follow = !arg_matches.is_present("no-follow");
+    let files: Option<Vec<&[u8]>> = arg_matches
+        .values_of_os("file")
+        .map(|values| values.map(|name| name.as_bytes()).collect());
 
-    let stat_file = read_stat_file(STATFILE)?;
+    let stat_file = read_stat_file(STATFILE, false)?;
     let stat_file = parse_stat_file(&stat_file)?;
-    for (name, line) in stat_file {
-        // TODO ignore not found errors
-        parse_line(&line)?.apply(&name, follow)?;
+
+    match files {
+        None => {
+            for (name, line) in stat_file {
+                // TODO ignore not found errors
+                parse_line(&line)?.apply(&name, follow)?;
+            }
+        }
+        Some(files) => {
+            for name in files {
+                let line = stat_file.get(name);
+                if let Some(line) = line {
+                    parse_line(&line)?.apply(&name, follow)?;
+                }
+            }
+        }
     }
+
     Ok(())
 }
