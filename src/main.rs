@@ -89,9 +89,9 @@ fn add(arg_matches: &ArgMatches) -> Result<()> {
 
 fn apply(arg_matches: &ArgMatches) -> Result<()> {
     let follow = !arg_matches.is_present("no-follow");
-    let files: Option<Vec<&[u8]>> = arg_matches
+    let files = arg_matches
         .values_of_os("file")
-        .map(|values| values.map(|name| name.as_bytes()).collect());
+        .map(|values| values.map(|name| name.as_bytes()));
 
     let stat_file = read_stat_file(STATFILE, false)?;
     let stat_file = parse_stat_file(&stat_file)?;
