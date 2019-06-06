@@ -105,8 +105,7 @@ fn apply(arg_matches: &ArgMatches) -> Result<()> {
         }
         Some(files) => {
             for name in files {
-                let line = stat_file.get(name);
-                if let Some(line) = line {
+                if let Some(line) = stat_file.get(name) {
                     parse_line(&line)?.apply(&name, follow)?;
                 }
             }

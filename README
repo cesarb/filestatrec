@@ -1,9 +1,9 @@
-gitstatrec - record mtime and mode for files in a git repository
+filestatrec - record mtime and mode for files in a git repository
 
 
 The git tree format, as used by git-annex, records only a minimum amount
 of per-file metadata. When recording more metadata is a requirement, it
-has to be recorded out of band; gitstatrec records it in a hidden text
+has to be recorded out of band; filestatrec records it in a hidden text
 file (.filestat). Currently it records the file's mode and modification
 time.
 
