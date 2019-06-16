@@ -147,12 +147,10 @@ impl StatApply {
 const HEXDIGIT: &[u8] = b"0123456789abcdef";
 
 fn escape(name: &[u8]) -> Cow<[u8]> {
-    let escape = name.iter().any(|&c| c < 0x20) || std::str::from_utf8(name).is_err();
-    let count = if escape {
-        name.iter().filter(|&&c| c < 0x20 || c >= 0x7f).count()
-    } else {
-        0
-    };
+    let escape_high = str::from_utf8(name).is_err();
+    let escape_byte = |c: u8| c.is_ascii_control() || c == b'\\' || escape_high && c >= 0x80;
+    let count = name.iter().filter(|&&c| escape_byte(c)).count();
+    debug_assert!(count > 0 || !escape_high);
 
     if count > 0 {
         let mut buf = Vec::with_capacity(name.len() + count * 3);
@@ -160,7 +158,7 @@ fn escape(name: &[u8]) -> Cow<[u8]> {
         for &c in name {
             match c {
                 b'\\' => buf.extend_from_slice(&[b'\\', b'\\']),
-                c if c < 0x20 || c >= 0x7f => buf.extend_from_slice(&[
+                c if escape_byte(c) => buf.extend_from_slice(&[
                     b'\\',
                     b'x',
                     HEXDIGIT[(c / 16) as usize],
@@ -237,6 +235,52 @@ fn nix_error(error: nix::Error) -> Error {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn escape_backslash() {
+        test_escape(b"a\\b", b"a\\\\b")
+    }
+
+    #[test]
+    fn escape_control() {
+        test_escape(b"a\x7fb", b"a\\x7fb")
+    }
+
+    #[test]
+    fn escape_latin1() {
+        test_escape(b"codifica\xe7\xe3o", b"codifica\\xe7\\xe3o")
+    }
+
+    #[test]
+    fn escape_utf8() {
+        test_escape("codificação".as_bytes(), "codificação".as_bytes())
+    }
+
+    #[test]
+    fn escape_control_latin1() {
+        test_escape(b"codi\x7ffica\xe7\xe3o", b"codi\\x7ffica\\xe7\\xe3o")
+    }
+
+    #[test]
+    fn escape_control_utf8() {
+        test_escape(
+            "codi\x7fficação".as_bytes(),
+            "codi\\x7fficação".as_bytes(),
+        )
+    }
+
+    #[test]
+    fn escape_spaces() {
+        let name = b"long name with spaces.txt";
+        test_escape(name, name)
+    }
+
+    fn test_escape(data: &[u8], escaped: &[u8]) {
+        use super::{escape, unescape};
+
+        assert_eq!(escape(data), escaped);
+        assert_eq!(unescape(escaped).unwrap(), data);
+    }
+
     #[test]
     fn escape_roundtrip() {
         use super::{escape, unescape};
