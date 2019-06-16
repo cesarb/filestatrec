@@ -246,6 +246,16 @@ mod tests {
     }
 
     #[test]
+    fn escape_tab() {
+        test_escape(b"a\tb", b"a\\x09b")
+    }
+
+    #[test]
+    fn escape_newline() {
+        test_escape(b"a\nb", b"a\\x0ab")
+    }
+
+    #[test]
     fn escape_latin1() {
         test_escape(b"codifica\xe7\xe3o", b"codifica\\xe7\\xe3o")
     }
