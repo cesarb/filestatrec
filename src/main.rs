@@ -1,5 +1,6 @@
-mod statfile;
-
+use crate::statfile::{
+    make_line, parse_line, parse_stat_file, read_stat_file, write_stat_file, STATFILE,
+};
 use clap::{
     app_from_crate, crate_authors, crate_description, crate_name, crate_version, AppSettings, Arg,
     ArgMatches, SubCommand,
@@ -9,9 +10,7 @@ use std::fs::{metadata, symlink_metadata};
 use std::io::Result;
 use std::os::unix::ffi::OsStrExt;
 
-use crate::statfile::{
-    make_line, parse_line, parse_stat_file, read_stat_file, write_stat_file, STATFILE,
-};
+mod statfile;
 
 fn main() -> Result<()> {
     let matches = app_from_crate!()
