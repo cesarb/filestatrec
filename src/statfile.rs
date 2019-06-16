@@ -113,7 +113,10 @@ impl StatApply {
     }
 
     pub fn apply(&self, name: &[u8], follow: bool) -> Result<()> {
-        if name.starts_with(b"/") || name.split(|&b| b == b'/').any(|c| c == b"..") {
+        if name
+            .split(|&b| b == b'/')
+            .any(|c| c.is_empty() || c == b"..")
+        {
             return Err(invalid_data("invalid path"));
         }
 
