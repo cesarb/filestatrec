@@ -113,10 +113,12 @@ impl StatApply {
     }
 
     pub fn apply(&self, name: &[u8], follow: bool) -> Result<()> {
+        if name.starts_with(b"/") || name.split(|&b| b == b'/').any(|c| c == b"..") {
+            return Err(invalid_data("invalid path"));
+        }
+
         let name = CString::new(name)?;
         let follow = follow && !self.is_link();
-
-        // TODO check for .. in name and/or link target
 
         if let Some(mode) = self.mode {
             if follow {
@@ -324,5 +326,28 @@ mod tests {
                 mtime: Some((4321, 123456789))
             }
         );
+    }
+
+    #[test]
+    fn invalid_path() {
+        test_invalid_path(b"/root", false);
+        test_invalid_path(b"/root", true);
+
+        test_invalid_path(b"../dir", false);
+        test_invalid_path(b"../dir", true);
+
+        test_invalid_path(b"a/../b", false);
+        test_invalid_path(b"a/../b", true);
+
+        test_invalid_path(b"dir/..", false);
+        test_invalid_path(b"dir/..", true);
+    }
+
+    fn test_invalid_path(name: &[u8], follow: bool) {
+        use super::StatApply;
+        use std::io::ErrorKind;
+
+        let error = StatApply::new().apply(name, follow).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidData);
     }
 }
