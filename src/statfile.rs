@@ -88,10 +88,8 @@ impl StatApply {
     }
 
     pub fn set_mode(&mut self, data: &[u8]) -> Result<()> {
-        self.mode = Some(
-            u32::from_str_radix(str::from_utf8(data).map_err(invalid_data)?, 8)
-                .map_err(invalid_data)?,
-        );
+        let data = str::from_utf8(data).map_err(invalid_data)?;
+        self.mode = Some(u32::from_str_radix(data, 8).map_err(invalid_data)?);
         Ok(())
     }
 
@@ -244,7 +242,7 @@ mod tests {
         use super::{escape, unescape};
 
         let name: Vec<u8> = (0..=255).collect();
-        assert_eq!(*name, *unescape(&escape(&name)).unwrap());
+        assert_eq!(name, &*unescape(&escape(&name)).unwrap());
     }
 
     #[test]
