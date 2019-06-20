@@ -37,6 +37,7 @@ pub fn write_stat_file(filename: &str, data: &StatFile) -> Result<()> {
             file.write_all(entry.1)?;
             file.write_all(&[b'\n'])?;
         }
+        file.into_inner()?.sync_all()?
     }
     rename(tmp, filename)
 }
