@@ -10,5 +10,5 @@ categories = ["command-line-utilities"]
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-clap = "2.32.0"
-nix = "0.13.0"
+clap = "2.33.0"
+nix = "0.14.1"
