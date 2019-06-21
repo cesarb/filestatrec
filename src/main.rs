@@ -9,10 +9,30 @@ use std::collections::btree_map::Entry;
 use std::fs::{metadata, symlink_metadata};
 use std::io::Result;
 use std::os::unix::ffi::OsStrExt;
+use std::process::exit;
 
 mod statfile;
 
-fn main() -> Result<()> {
+enum ExitCode {
+    SUCCESS,
+    FAILURE,
+}
+
+impl ExitCode {
+    #[inline]
+    fn code(&self) -> i32 {
+        match self {
+            ExitCode::SUCCESS => 0,
+            ExitCode::FAILURE => 1,
+        }
+    }
+}
+
+fn main() {
+    exit(run().code())
+}
+
+fn run() -> ExitCode {
     let matches = app_from_crate!()
         .setting(AppSettings::SubcommandRequired)
         .setting(AppSettings::VersionlessSubcommands)
@@ -47,14 +67,22 @@ fn main() -> Result<()> {
         )
         .get_matches();
 
-    match matches.subcommand() {
+    let result = match matches.subcommand() {
         ("add", Some(matches)) => add(matches),
         ("apply", Some(matches)) => apply(matches),
         _ => unreachable!(),
+    };
+
+    match result {
+        Ok(code) => code,
+        Err(err) => {
+            eprintln!("{}", err);
+            ExitCode::FAILURE
+        }
     }
 }
 
-fn add(arg_matches: &ArgMatches) -> Result<()> {
+fn add(arg_matches: &ArgMatches) -> Result<ExitCode> {
     let follow = !arg_matches.is_present("no-follow");
     let force = arg_matches.is_present("force");
 
@@ -83,10 +111,11 @@ fn add(arg_matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    write_stat_file(STATFILE, &stat_file)
+    write_stat_file(STATFILE, &stat_file)?;
+    Ok(ExitCode::SUCCESS)
 }
 
-fn apply(arg_matches: &ArgMatches) -> Result<()> {
+fn apply(arg_matches: &ArgMatches) -> Result<ExitCode> {
     let follow = !arg_matches.is_present("no-follow");
     let files = arg_matches
         .values_of_os("file")
@@ -111,5 +140,5 @@ fn apply(arg_matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
