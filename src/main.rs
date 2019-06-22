@@ -1,3 +1,4 @@
+use crate::error::{with_error_path, ErrorWithPath};
 use crate::statfile::{
     make_line, parse_line, parse_stat_file, read_stat_file, write_stat_file, STATFILE,
 };
@@ -7,10 +8,11 @@ use clap::{
 };
 use std::collections::btree_map::Entry;
 use std::fs::{metadata, symlink_metadata};
-use std::io::Result;
+use std::io;
 use std::os::unix::ffi::OsStrExt;
 use std::process::exit;
 
+mod error;
 mod statfile;
 
 enum ExitCode {
@@ -82,19 +84,21 @@ fn run() -> ExitCode {
     }
 }
 
-fn add(arg_matches: &ArgMatches) -> Result<ExitCode> {
+fn add(arg_matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
     let follow = !arg_matches.is_present("no-follow");
     let force = arg_matches.is_present("force");
 
-    let stat_file = read_stat_file(STATFILE, true)?;
-    let mut stat_file = parse_stat_file(&stat_file)?;
+    let stat_file = with_error_path(STATFILE, || read_stat_file(STATFILE, true))?;
+    let mut stat_file = with_error_path(STATFILE, || parse_stat_file(&stat_file))?;
 
     for name in arg_matches.values_of_os("file").unwrap() {
-        let metadata = if follow {
-            metadata(name)
-        } else {
-            symlink_metadata(name)
-        }?;
+        let metadata = with_error_path(name.as_bytes(), || {
+            if follow {
+                metadata(name)
+            } else {
+                symlink_metadata(name)
+            }
+        })?;
 
         let name = name.as_bytes();
         let line = make_line(name, &metadata);
@@ -111,30 +115,30 @@ fn add(arg_matches: &ArgMatches) -> Result<ExitCode> {
         }
     }
 
-    write_stat_file(STATFILE, &stat_file)?;
+    with_error_path(STATFILE, || write_stat_file(STATFILE, &stat_file))?;
     Ok(ExitCode::SUCCESS)
 }
 
-fn apply(arg_matches: &ArgMatches) -> Result<ExitCode> {
+fn apply(arg_matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
     let follow = !arg_matches.is_present("no-follow");
     let files = arg_matches
         .values_of_os("file")
         .map(|values| values.map(|name| name.as_bytes()));
 
-    let stat_file = read_stat_file(STATFILE, false)?;
-    let stat_file = parse_stat_file(&stat_file)?;
+    let stat_file = with_error_path(STATFILE, || read_stat_file(STATFILE, false))?;
+    let stat_file = with_error_path(STATFILE, || parse_stat_file(&stat_file))?;
 
     match files {
         None => {
             for (name, line) in stat_file {
                 // TODO ignore not found errors
-                parse_line(&line)?.apply(&name, follow)?;
+                with_error_path(name.as_ref(), || parse_line(&line)?.apply(&name, follow))?;
             }
         }
         Some(files) => {
             for name in files {
                 if let Some(line) = stat_file.get(name) {
-                    parse_line(&line)?.apply(&name, follow)?;
+                    with_error_path(name, || parse_line(&line)?.apply(&name, follow))?;
                 }
             }
         }
