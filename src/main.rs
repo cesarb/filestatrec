@@ -128,21 +128,28 @@ fn apply(arg_matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>>
     let stat_file = with_error_path(STATFILE, || read_stat_file(STATFILE, false))?;
     let stat_file = with_error_path(STATFILE, || parse_stat_file(&stat_file))?;
 
+    let mut result = ExitCode::SUCCESS;
+    let mut error = |err| {
+        eprintln!("{}", err);
+        result = ExitCode::FAILURE;
+    };
+
     match files {
         None => {
             for (name, line) in stat_file {
-                // TODO ignore not found errors
-                with_error_path(name.as_ref(), || parse_line(&line)?.apply(&name, follow))?;
+                with_error_path(name.as_ref(), || parse_line(&line)?.apply(&name, follow))
+                    .unwrap_or_else(&mut error);
             }
         }
         Some(files) => {
             for name in files {
                 if let Some(line) = stat_file.get(name) {
-                    with_error_path(name, || parse_line(&line)?.apply(&name, follow))?;
+                    with_error_path(name, || parse_line(&line)?.apply(&name, follow))
+                        .unwrap_or_else(&mut error);
                 }
             }
         }
     }
 
-    Ok(ExitCode::SUCCESS)
+    Ok(result)
 }
