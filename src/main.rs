@@ -8,7 +8,7 @@ use clap::{
 };
 use std::collections::btree_map::Entry;
 use std::fs::{metadata, symlink_metadata};
-use std::io;
+use std::io::{self, ErrorKind};
 use std::os::unix::ffi::OsStrExt;
 use std::process::exit;
 
@@ -143,10 +143,17 @@ fn apply(arg_matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>>
         }
         Some(files) => {
             for name in files {
-                if let Some(line) = stat_file.get(name) {
-                    with_error_path(name, || parse_line(&line)?.apply(&name, follow))
-                        .unwrap_or_else(&mut error);
-                }
+                with_error_path(name, || {
+                    if let Some(line) = stat_file.get(name) {
+                        parse_line(&line)?.apply(&name, follow)
+                    } else {
+                        Err(io::Error::new(
+                            ErrorKind::InvalidInput,
+                            "Not found in stat file",
+                        ))
+                    }
+                })
+                .unwrap_or_else(&mut error);
             }
         }
     }
