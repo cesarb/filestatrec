@@ -15,6 +15,7 @@ use std::process::exit;
 mod error;
 mod statfile;
 
+#[allow(clippy::upper_case_acronyms)]
 enum ExitCode {
     SUCCESS,
     FAILURE,
@@ -145,7 +146,7 @@ fn apply(arg_matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>>
             for name in files {
                 with_error_path(name, || {
                     if let Some(line) = stat_file.get(name) {
-                        parse_line(&line)?.apply(&name, follow)
+                        parse_line(line)?.apply(name, follow)
                     } else {
                         Err(io::Error::new(
                             ErrorKind::InvalidInput,
