@@ -1,4 +1,3 @@
-use nix;
 use nix::sys::stat::{fchmodat, utimensat, FchmodatFlags, Mode, UtimensatFlags};
 use nix::sys::time::{TimeSpec, TimeValLike};
 use std::borrow::Cow;
@@ -131,8 +130,7 @@ impl StatApply {
                     &*name,
                     Mode::from_bits_truncate(mode & 0o777),
                     FchmodatFlags::FollowSymlink,
-                )
-                .map_err(nix_error)?;
+                )?;
             }
         }
 
@@ -143,7 +141,7 @@ impl StatApply {
             } else {
                 UtimensatFlags::NoFollowSymlink
             };
-            utimensat(None, &*name, &mtime, &mtime, flags).map_err(nix_error)?;
+            utimensat(None, &*name, &mtime, &mtime, flags)?;
         }
 
         Ok(())
@@ -230,13 +228,6 @@ where
     E: Into<Box<dyn error::Error + Send + Sync>>,
 {
     Error::new(ErrorKind::InvalidData, error)
-}
-
-fn nix_error(error: nix::Error) -> Error {
-    match error {
-        nix::Error::Sys(errno) => errno.into(),
-        error => Error::new(ErrorKind::Other, error),
-    }
 }
 
 #[cfg(test)]
