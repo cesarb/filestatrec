@@ -278,10 +278,7 @@ mod tests {
 
     #[test]
     fn escape_control_utf8() {
-        test_escape(
-            "codi\x7fficação".as_bytes(),
-            "codi\\x7fficação".as_bytes(),
-        )
+        test_escape("codi\x7fficação".as_bytes(), "codi\\x7fficação".as_bytes())
     }
 
     #[test]
