@@ -2,10 +2,8 @@ use crate::error::{with_error_path, ErrorWithPath};
 use crate::statfile::{
     make_line, parse_line, parse_stat_file, read_stat_file, write_stat_file, STATFILE,
 };
-use clap::{
-    app_from_crate, crate_authors, crate_description, crate_name, crate_version, AppSettings, Arg,
-    ArgMatches, SubCommand,
-};
+use clap::builder::ValueParser;
+use clap::{command, Arg, ArgMatches, Command};
 use std::collections::btree_map::Entry;
 use std::fs::{metadata, symlink_metadata};
 use std::io::{self, ErrorKind};
@@ -35,44 +33,59 @@ fn main() {
     exit(run().code())
 }
 
-fn run() -> ExitCode {
-    let matches = app_from_crate!()
-        .setting(AppSettings::SubcommandRequired)
-        .setting(AppSettings::VersionlessSubcommands)
+fn app() -> Command<'static> {
+    command!()
+        .subcommand_required(true)
         .subcommand(
-            SubCommand::with_name("add")
-                .arg(Arg::with_name("file").multiple(true).required(true))
+            Command::new("add")
                 .arg(
-                    Arg::with_name("follow")
+                    Arg::new("file")
+                        .multiple_values(true)
+                        .required(true)
+                        .value_parser(ValueParser::os_string()),
+                )
+                .arg(
+                    Arg::new("follow")
                         .long("follow")
                         .overrides_with("no-follow"),
                 )
                 .arg(
-                    Arg::with_name("no-follow")
+                    Arg::new("no-follow")
                         .long("no-follow")
                         .overrides_with("follow"),
                 )
-                .arg(Arg::with_name("force").long("force").short("f")),
+                .arg(Arg::new("force").long("force").short('f')),
         )
         .subcommand(
-            SubCommand::with_name("apply")
-                .arg(Arg::with_name("file").multiple(true).required(false))
+            Command::new("apply")
                 .arg(
-                    Arg::with_name("follow")
+                    Arg::new("file")
+                        .multiple_values(true)
+                        .required(false)
+                        .value_parser(ValueParser::os_string()),
+                )
+                .arg(
+                    Arg::new("follow")
                         .long("follow")
                         .overrides_with("no-follow"),
                 )
                 .arg(
-                    Arg::with_name("no-follow")
+                    Arg::new("no-follow")
                         .long("no-follow")
                         .overrides_with("follow"),
                 ),
         )
-        .get_matches();
+}
 
-    let result = match matches.subcommand() {
-        ("add", Some(matches)) => add(matches),
-        ("apply", Some(matches)) => apply(matches),
+#[test]
+fn verify_app() {
+    app().debug_assert();
+}
+
+fn run() -> ExitCode {
+    let result = match app().get_matches().subcommand() {
+        Some(("add", matches)) => add(matches),
+        Some(("apply", matches)) => apply(matches),
         _ => unreachable!(),
     };
 
@@ -85,14 +98,14 @@ fn run() -> ExitCode {
     }
 }
 
-fn add(arg_matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
-    let follow = !arg_matches.is_present("no-follow");
-    let force = arg_matches.is_present("force");
+fn add(matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
+    let follow = !matches.contains_id("no-follow");
+    let force = matches.contains_id("force");
 
     let stat_file = with_error_path(STATFILE, || read_stat_file(STATFILE, true))?;
     let mut stat_file = with_error_path(STATFILE, || parse_stat_file(&stat_file))?;
 
-    for name in arg_matches.values_of_os("file").unwrap() {
+    for name in matches.get_raw("file").unwrap() {
         let metadata = with_error_path(name.as_bytes(), || {
             if follow {
                 metadata(name)
@@ -120,10 +133,10 @@ fn add(arg_matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn apply(arg_matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
-    let follow = !arg_matches.is_present("no-follow");
-    let files = arg_matches
-        .values_of_os("file")
+fn apply(matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
+    let follow = !matches.contains_id("no-follow");
+    let files = matches
+        .get_raw("file")
         .map(|values| values.map(|name| name.as_bytes()));
 
     let stat_file = with_error_path(STATFILE, || read_stat_file(STATFILE, false))?;
