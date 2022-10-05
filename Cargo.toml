@@ -8,7 +8,8 @@ repository = "https://github.com/cesarb/filestatrec"
 readme = "README.md"
 categories = ["command-line-utilities"]
 license = "MIT OR Apache-2.0"
+rust-version = "1.61"
 
 [dependencies]
-clap = { version = "3.2.8", features = ["cargo"] }
-nix = { version = "0.24.1", default-features = false, features = ["fs"] }
+clap = { version = "4.0.0", features = ["cargo"] }
+nix = { version = "0.25.0", default-features = false, features = ["fs"] }

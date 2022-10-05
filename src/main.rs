@@ -3,87 +3,39 @@ use crate::statfile::{
     make_line, parse_line, parse_stat_file, read_stat_file, write_stat_file, STATFILE,
 };
 use clap::builder::ValueParser;
-use clap::{command, Arg, ArgMatches, Command};
+use clap::{arg, command, ArgMatches, Command};
 use std::collections::btree_map::Entry;
 use std::fs::{metadata, symlink_metadata};
 use std::io::{self, ErrorKind};
 use std::os::unix::ffi::OsStrExt;
-use std::process::exit;
+use std::process::ExitCode;
 
 mod error;
 mod statfile;
 
-#[allow(clippy::upper_case_acronyms)]
-enum ExitCode {
-    SUCCESS,
-    FAILURE,
-}
-
-impl ExitCode {
-    #[inline]
-    fn code(&self) -> i32 {
-        match self {
-            ExitCode::SUCCESS => 0,
-            ExitCode::FAILURE => 1,
-        }
-    }
-}
-
-fn main() {
-    exit(run().code())
-}
-
-fn app() -> Command<'static> {
-    command!()
-        .subcommand_required(true)
-        .subcommand(
-            Command::new("add")
-                .arg(
-                    Arg::new("file")
-                        .multiple_values(true)
-                        .required(true)
-                        .value_parser(ValueParser::os_string()),
-                )
-                .arg(
-                    Arg::new("follow")
-                        .long("follow")
-                        .overrides_with("no-follow"),
-                )
-                .arg(
-                    Arg::new("no-follow")
-                        .long("no-follow")
-                        .overrides_with("follow"),
-                )
-                .arg(Arg::new("force").long("force").short('f')),
-        )
-        .subcommand(
-            Command::new("apply")
-                .arg(
-                    Arg::new("file")
-                        .multiple_values(true)
-                        .required(false)
-                        .value_parser(ValueParser::os_string()),
-                )
-                .arg(
-                    Arg::new("follow")
-                        .long("follow")
-                        .overrides_with("no-follow"),
-                )
-                .arg(
-                    Arg::new("no-follow")
-                        .long("no-follow")
-                        .overrides_with("follow"),
-                ),
-        )
+fn cmd() -> Command {
+    command!().subcommand_required(true).subcommands([
+        Command::new("add").args([
+            arg!(file: <FILE> ...).value_parser(ValueParser::os_string()),
+            arg!(--"follow").overrides_with("no-follow"),
+            arg!(--"no-follow").overrides_with("follow"),
+            arg!(-f --force),
+        ]),
+        Command::new("apply").args([
+            arg!(file: [FILE] ...).value_parser(ValueParser::os_string()),
+            arg!(--"follow").overrides_with("no-follow"),
+            arg!(--"no-follow").overrides_with("follow"),
+        ]),
+    ])
 }
 
 #[test]
-fn verify_app() {
-    app().debug_assert();
+fn verify_cmd() {
+    cmd().debug_assert();
 }
 
-fn run() -> ExitCode {
-    let result = match app().get_matches().subcommand() {
+fn main() -> ExitCode {
+    let result = match cmd().get_matches().subcommand() {
         Some(("add", matches)) => add(matches),
         Some(("apply", matches)) => apply(matches),
         _ => unreachable!(),
@@ -99,8 +51,8 @@ fn run() -> ExitCode {
 }
 
 fn add(matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
-    let follow = !matches.contains_id("no-follow");
-    let force = matches.contains_id("force");
+    let follow = !matches.get_flag("no-follow");
+    let force = matches.get_flag("force");
 
     let stat_file = with_error_path(STATFILE, || read_stat_file(STATFILE, true))?;
     let mut stat_file = with_error_path(STATFILE, || parse_stat_file(&stat_file))?;
@@ -134,7 +86,7 @@ fn add(matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
 }
 
 fn apply(matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
-    let follow = !matches.contains_id("no-follow");
+    let follow = !matches.get_flag("no-follow");
     let files = matches
         .get_raw("file")
         .map(|values| values.map(|name| name.as_bytes()));
