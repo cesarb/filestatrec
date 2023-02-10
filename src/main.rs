@@ -44,7 +44,7 @@ fn main() -> ExitCode {
     match result {
         Ok(code) => code,
         Err(err) => {
-            eprintln!("{}", err);
+            eprintln!("{err}");
             ExitCode::FAILURE
         }
     }
@@ -96,7 +96,7 @@ fn apply(matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
 
     let mut result = ExitCode::SUCCESS;
     let mut error = |err| {
-        eprintln!("{}", err);
+        eprintln!("{err}");
         result = ExitCode::FAILURE;
     };
 

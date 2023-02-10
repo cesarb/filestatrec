@@ -68,7 +68,7 @@ pub fn parse_line(line: &[u8]) -> Result<StatApply> {
         ) {
             (b"mode=", data) => apply.set_mode(data)?,
             (b"mtime=", data) => apply.set_mtime(data)?,
-            (_, _) => {}
+            _ => {}
         }
     }
     Ok(apply)
@@ -104,7 +104,7 @@ impl StatApply {
             (Some(sec), Some(nsec), None) if nsec.len() == 9 => {
                 (sec, str::parse(nsec).map_err(invalid_data)?)
             }
-            (_, _, _) => return Err(invalid_data(format!("invalid mtime {}", data))),
+            _ => return Err(invalid_data(format!("invalid mtime {data}"))),
         };
         self.mtime = Some(Timespec { tv_sec, tv_nsec });
         Ok(())
@@ -193,15 +193,14 @@ fn unescape(name: &[u8]) -> Result<Cow<[u8]>> {
                             let (hi, lo) = (char::from(hi), char::from(lo));
                             match (hi.to_digit(16), lo.to_digit(16)) {
                                 (Some(hi), Some(lo)) => (hi * 16 + lo) as u8,
-                                (_, _) => {
+                                _ => {
                                     return Err(invalid_data(format!(
-                                        "invalid hexadecimal escape \\x{}{}",
-                                        hi, lo
-                                    )));
+                                        "invalid hexadecimal escape \\x{hi}{lo}"
+                                    )))
                                 }
                             }
                         }
-                        (_, _) => return Err(invalid_data("truncated hexadecimal escape")),
+                        _ => return Err(invalid_data("truncated hexadecimal escape")),
                     },
                     Some(&c) => {
                         return Err(invalid_data(format!(
