@@ -1,9 +1,7 @@
-use nix::sys::stat::{fchmodat, utimensat, FchmodatFlags, Mode, UtimensatFlags};
-use nix::sys::time::{TimeSpec, TimeValLike};
+use rustix::fs::{chmodat, cwd, utimensat, AtFlags, Mode, Timespec, Timestamps};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::error;
-use std::ffi::CString;
 use std::fs::{read, rename, File, Metadata};
 use std::io::{BufWriter, Error, ErrorKind, Result, Write};
 use std::os::unix::fs::MetadataExt;
@@ -79,7 +77,7 @@ pub fn parse_line(line: &[u8]) -> Result<StatApply> {
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct StatApply {
     mode: Option<u32>,
-    mtime: Option<(i64, i64)>,
+    mtime: Option<Timespec>,
 }
 
 impl StatApply {
@@ -96,14 +94,19 @@ impl StatApply {
     pub fn set_mtime(&mut self, data: &[u8]) -> Result<()> {
         let data = str::from_utf8(data).map_err(invalid_data)?;
         let mut iter = data.split('.');
-        self.mtime = Some(match (iter.next(), iter.next(), iter.next()) {
-            (Some(sec), None, _) => (str::parse(sec).map_err(invalid_data)?, 0),
-            (Some(sec), Some(nsec), None) if nsec.len() == 9 => (
-                str::parse(sec).map_err(invalid_data)?,
-                str::parse(nsec).map_err(invalid_data)?,
-            ),
+        let sec = iter
+            .next()
+            .map(str::parse)
+            .transpose()
+            .map_err(invalid_data)?;
+        let (tv_sec, tv_nsec) = match (sec, iter.next(), iter.next()) {
+            (Some(sec), None, _) => (sec, 0),
+            (Some(sec), Some(nsec), None) if nsec.len() == 9 => {
+                (sec, str::parse(nsec).map_err(invalid_data)?)
+            }
             (_, _, _) => return Err(invalid_data(format!("invalid mtime {}", data))),
-        });
+        };
+        self.mtime = Some(Timespec { tv_sec, tv_nsec });
         Ok(())
     }
 
@@ -120,28 +123,25 @@ impl StatApply {
             return Err(invalid_data("invalid path"));
         }
 
-        let name = CString::new(name)?;
         let follow = follow && !self.is_link();
 
         if let Some(mode) = self.mode {
             if follow {
-                fchmodat(
-                    None,
-                    &*name,
-                    Mode::from_bits_truncate(mode & 0o777),
-                    FchmodatFlags::FollowSymlink,
-                )?;
+                chmodat(cwd(), name, Mode::from_bits_truncate(mode & 0o777))?;
             }
         }
 
         if let Some(mtime) = self.mtime {
-            let mtime = TimeSpec::nanoseconds(mtime.0 * 1_000_000_000 + mtime.1);
-            let flags = if follow {
-                UtimensatFlags::FollowSymlink
-            } else {
-                UtimensatFlags::NoFollowSymlink
+            let times = Timestamps {
+                last_access: mtime,
+                last_modification: mtime,
             };
-            utimensat(None, &*name, &mtime, &mtime, flags)?;
+            let flags = if follow {
+                AtFlags::empty()
+            } else {
+                AtFlags::SYMLINK_NOFOLLOW
+            };
+            utimensat(cwd(), name, &times, flags)?;
         }
 
         Ok(())
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn parse_line() {
-        use super::{parse_line, StatApply};
+        use super::{parse_line, StatApply, Timespec};
 
         assert_eq!(
             parse_line(b"name").unwrap(),
@@ -308,14 +308,20 @@ mod tests {
             parse_line(b"name\tmode=100644\tmtime=4321.123456789").unwrap(),
             StatApply {
                 mode: Some(0o100644),
-                mtime: Some((4321, 123456789))
+                mtime: Some(Timespec {
+                    tv_sec: 4321,
+                    tv_nsec: 123456789
+                })
             }
         );
         assert_eq!(
             parse_line(b"name\tfoo\tbar=\tbaz=0\tmode=100644\tmtime=4321.123456789").unwrap(),
             StatApply {
                 mode: Some(0o100644),
-                mtime: Some((4321, 123456789))
+                mtime: Some(Timespec {
+                    tv_sec: 4321,
+                    tv_nsec: 123456789
+                })
             }
         );
     }
