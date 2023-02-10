@@ -12,4 +12,4 @@ rust-version = "1.61"
 
 [dependencies]
 clap = { version = "4.0.0", features = ["cargo"] }
-nix = { version = "0.25.0", default-features = false, features = ["fs"] }
+nix = { version = "0.26.0", default-features = false, features = ["fs"] }
