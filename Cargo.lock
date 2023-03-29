@@ -121,7 +121,7 @@ dependencies = [
 
 [[package]]
 name = "filestatrec"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "clap",
  "rustix",
