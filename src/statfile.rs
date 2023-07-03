@@ -1,4 +1,4 @@
-use rustix::fs::{chmodat, cwd, utimensat, AtFlags, Mode, Timespec, Timestamps};
+use rustix::fs::{chmodat, utimensat, AtFlags, Mode, Timespec, Timestamps, CWD};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::error;
@@ -124,10 +124,15 @@ impl StatApply {
         }
 
         let follow = follow && !self.is_link();
+        let flags = if follow {
+            AtFlags::empty()
+        } else {
+            AtFlags::SYMLINK_NOFOLLOW
+        };
 
         if let Some(mode) = self.mode {
             if follow {
-                chmodat(cwd(), name, Mode::from_bits_truncate(mode & 0o777))?;
+                chmodat(CWD, name, Mode::from_bits_truncate(mode & 0o777), flags)?;
             }
         }
 
@@ -136,12 +141,7 @@ impl StatApply {
                 last_access: mtime,
                 last_modification: mtime,
             };
-            let flags = if follow {
-                AtFlags::empty()
-            } else {
-                AtFlags::SYMLINK_NOFOLLOW
-            };
-            utimensat(cwd(), name, &times, flags)?;
+            utimensat(CWD, name, &times, flags)?;
         }
 
         Ok(())
