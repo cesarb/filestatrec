@@ -1,6 +1,6 @@
 [package]
 name = "filestatrec"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Cesar Eduardo Barros <cesarb@cesarb.eti.br>"]
 edition = "2021"
 description = "record mtime and mode for files in a git repository"
