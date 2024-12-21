@@ -32,7 +32,7 @@ pub fn write_stat_file(filename: &str, data: &StatFile) -> Result<()> {
         let mut file = BufWriter::new(File::create(&tmp)?);
         for entry in data {
             file.write_all(entry.1)?;
-            file.write_all(&[b'\n'])?;
+            file.write_all(b"\n")?;
         }
         file.into_inner()?.sync_all()?
     }
@@ -161,7 +161,7 @@ fn escape(name: &[u8]) -> Cow<[u8]> {
 
         for &c in name {
             match c {
-                b'\\' => buf.extend_from_slice(&[b'\\', b'\\']),
+                b'\\' => buf.extend_from_slice(b"\\\\"),
                 c if escape_byte(c) => buf.extend_from_slice(&[
                     b'\\',
                     b'x',
