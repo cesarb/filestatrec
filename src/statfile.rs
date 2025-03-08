@@ -1,8 +1,8 @@
-use rustix::fs::{chmodat, utimensat, AtFlags, Mode, Timespec, Timestamps, CWD};
+use rustix::fs::{AtFlags, CWD, Mode, Timespec, Timestamps, chmodat, utimensat};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::error;
-use std::fs::{read, rename, File, Metadata};
+use std::fs::{File, Metadata, read, rename};
 use std::io::{BufWriter, Error, ErrorKind, Result, Write};
 use std::os::unix::fs::MetadataExt;
 use std::str;
@@ -112,7 +112,7 @@ impl StatApply {
 
     fn is_link(&self) -> bool {
         self.mode
-            .map_or(false, |mode| (mode & 0o170_000) == 0o120_000)
+            .is_some_and(|mode| (mode & 0o170_000) == 0o120_000)
     }
 
     pub fn apply(&self, name: &[u8], follow: bool) -> Result<()> {
@@ -196,7 +196,7 @@ fn unescape(name: &[u8]) -> Result<Cow<[u8]>> {
                                 _ => {
                                     return Err(invalid_data(format!(
                                         "invalid hexadecimal escape \\x{hi}{lo}"
-                                    )))
+                                    )));
                                 }
                             }
                         }
@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn parse_line() {
-        use super::{parse_line, StatApply, Timespec};
+        use super::{StatApply, Timespec, parse_line};
 
         assert_eq!(
             parse_line(b"name").unwrap(),

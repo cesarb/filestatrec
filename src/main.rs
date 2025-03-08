@@ -1,9 +1,9 @@
-use crate::error::{with_error_path, ErrorWithPath};
+use crate::error::{ErrorWithPath, with_error_path};
 use crate::statfile::{
-    make_line, parse_line, parse_stat_file, read_stat_file, write_stat_file, STATFILE,
+    STATFILE, make_line, parse_line, parse_stat_file, read_stat_file, write_stat_file,
 };
 use clap::builder::ValueParser;
-use clap::{arg, command, ArgMatches, Command};
+use clap::{ArgMatches, Command, arg, command};
 use std::collections::btree_map::Entry;
 use std::fs::{metadata, symlink_metadata};
 use std::io::{self, ErrorKind};

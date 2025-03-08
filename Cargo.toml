@@ -2,14 +2,14 @@
 name = "filestatrec"
 version = "0.0.9"
 authors = ["Cesar Eduardo Barros <cesarb@cesarb.eti.br>"]
-edition = "2021"
+edition = "2024"
 description = "record mtime and mode for files in a git repository"
-repository = "https://github.com/cesarb/filestatrec"
+repository = "https://codeberg.org/cesarb/filestatrec"
 readme = "README.md"
 categories = ["command-line-utilities"]
 license = "MIT OR Apache-2.0"
-rust-version = "1.61"
+rust-version = "1.85.0"
 
 [dependencies]
 clap = { version = "4.0.0", features = ["cargo"] }
-rustix = { version = "0.38.0", features = ["fs"] }
+rustix = { version = "1.0.0", features = ["fs"] }
