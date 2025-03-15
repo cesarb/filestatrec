@@ -34,7 +34,7 @@ pub fn write_stat_file(filename: &str, data: &StatFile) -> Result<()> {
             file.write_all(entry.1)?;
             file.write_all(b"\n")?;
         }
-        file.into_inner()?.sync_all()?
+        file.into_inner()?.sync_all()?;
     }
     rename(tmp, filename)
 }
@@ -82,7 +82,7 @@ pub struct StatApply {
 
 impl StatApply {
     pub fn new() -> Self {
-        Default::default()
+        StatApply::default()
     }
 
     pub fn set_mode(&mut self, data: &[u8]) -> Result<()> {
@@ -91,6 +91,7 @@ impl StatApply {
         Ok(())
     }
 
+    #[allow(clippy::similar_names)]
     pub fn set_mtime(&mut self, data: &[u8]) -> Result<()> {
         let data = str::from_utf8(data).map_err(invalid_data)?;
         let mut iter = data.split('.');
@@ -192,6 +193,7 @@ fn unescape(name: &[u8]) -> Result<Cow<[u8]>> {
                         (Some(&hi), Some(&lo)) => {
                             let (hi, lo) = (char::from(hi), char::from(lo));
                             match (hi.to_digit(16), lo.to_digit(16)) {
+                                #[allow(clippy::cast_possible_truncation)]
                                 (Some(hi), Some(lo)) => (hi * 16 + lo) as u8,
                                 _ => {
                                     return Err(invalid_data(format!(

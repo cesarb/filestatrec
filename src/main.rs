@@ -89,7 +89,7 @@ fn apply(matches: &ArgMatches) -> Result<ExitCode, ErrorWithPath<io::Error>> {
     let follow = !matches.get_flag("no-follow");
     let files = matches
         .get_raw("file")
-        .map(|values| values.map(|name| name.as_bytes()));
+        .map(|values| values.map(OsStrExt::as_bytes));
 
     let stat_file = with_error_path(STATFILE, || read_stat_file(STATFILE, false))?;
     let stat_file = with_error_path(STATFILE, || parse_stat_file(&stat_file))?;
