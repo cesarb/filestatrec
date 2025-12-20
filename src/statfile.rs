@@ -19,7 +19,7 @@ pub fn read_stat_file(filename: &str, create: bool) -> Result<Vec<u8>> {
     }
 }
 
-pub fn parse_stat_file(data: &[u8]) -> Result<StatFile> {
+pub fn parse_stat_file(data: &[u8]) -> Result<StatFile<'_>> {
     data.split(|&b| b == b'\n')
         .filter(|s| !s.is_empty())
         .map(extract_name)
@@ -53,7 +53,7 @@ pub fn make_line(name: &[u8], metadata: &Metadata) -> Vec<u8> {
     line
 }
 
-fn extract_name(line: &[u8]) -> Result<StatFileEntry> {
+fn extract_name(line: &[u8]) -> Result<StatFileEntry<'_>> {
     let name = line.split(|&b| b == b'\t').next().unwrap();
     Ok((unescape(name)?, line.into()))
 }
@@ -151,7 +151,7 @@ impl StatApply {
 
 const HEXDIGIT: &[u8] = b"0123456789abcdef";
 
-fn escape(name: &[u8]) -> Cow<[u8]> {
+fn escape(name: &[u8]) -> Cow<'_, [u8]> {
     let escape_high = str::from_utf8(name).is_err();
     let escape_byte = |c: u8| c.is_ascii_control() || c == b'\\' || escape_high && c >= 0x80;
     let count = name.iter().filter(|&&c| escape_byte(c)).count();
@@ -180,7 +180,7 @@ fn escape(name: &[u8]) -> Cow<[u8]> {
     }
 }
 
-fn unescape(name: &[u8]) -> Result<Cow<[u8]>> {
+fn unescape(name: &[u8]) -> Result<Cow<'_, [u8]>> {
     Ok(if name.contains(&b'\\') {
         let mut buf = Vec::with_capacity(name.len());
 
