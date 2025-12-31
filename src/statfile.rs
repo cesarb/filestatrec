@@ -1,4 +1,4 @@
-use rustix::fs::{AtFlags, CWD, Mode, Timespec, Timestamps, chmodat, utimensat};
+use rustix::fs::{AtFlags, CWD, Mode, RawMode, Timespec, Timestamps, chmodat, utimensat};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::error;
@@ -76,7 +76,7 @@ pub fn parse_line(line: &[u8]) -> Result<StatApply> {
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct StatApply {
-    mode: Option<u32>,
+    mode: Option<RawMode>,
     mtime: Option<Timespec>,
 }
 
@@ -87,7 +87,7 @@ impl StatApply {
 
     pub fn set_mode(&mut self, data: &[u8]) -> Result<()> {
         let data = str::from_utf8(data).map_err(invalid_data)?;
-        self.mode = Some(u32::from_str_radix(data, 8).map_err(invalid_data)?);
+        self.mode = Some(RawMode::from_str_radix(data, 8).map_err(invalid_data)?);
         Ok(())
     }
 
